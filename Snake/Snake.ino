@@ -12,10 +12,10 @@ FASTLED_USING_NAMESPACE
 #define COLOR_ORDER RGB
 #define NUM_LEDS    100
 //#define FASTLED_INTERRUPT_RETRY_COUNT 0
-#define BRIGHTNESS         100
+#define BRIGHTNESS         255
 #define FRAMES_PER_SECOND  30
-#define JOYSTICK_X 2
-#define JOYSTICK_Y 3
+#define JOYSTICK_X 3
+#define JOYSTICK_Y 2
 
 
 CRGB leds[NUM_LEDS];
@@ -26,6 +26,17 @@ unsigned long interval=1000/FRAMES_PER_SECOND;
 uint8_t snake_speed = 1;
 const short initialSnakeLength = 3;
 uint8_t game_cycle = 0;
+bool game_running = false;
+
+struct Point {
+  int row = 0, col = 0;
+  Point(int row = 0, int col = 0): row(row), col(col) {}
+};
+
+struct Coordinate {
+  int x = 0, y = 0;
+  Coordinate(int x = 0, int y = 0): x(x), y(y) {}
+};
 
 
 
@@ -36,22 +47,21 @@ void setup() {
       globvals[i*4+j]=0;
     }
   }
- initialize_snake();
   //initialize();         // initialize pins & LED matrix
+  
+// construct with default values in case the user turns off the calibration
+  Coordinate joystickHome(500, 500);
   calibrateJoystick(); // calibrate the joystick home (do not touch it)
   
-  delay(3000); // 3 second delay for recovery
+  delay(500); // 3 second delay for recovery
   FastLED.setDither(0);
   
   // tell FastLED about the LED strip configuration
   //FastLED.addLeds<LED_TYPE,DATA_PIN,COLOR_ORDER>(leds, NUM_LEDS).setCorrection(TypicalLEDStrip);
-  FastLED.addLeds<LED_TYPE,DATA_PIN,CLK_PIN,COLOR_ORDER>(leds, NUM_LEDS).setCorrection(TypicalLEDStrip);
+  FastLED.addLeds<LED_TYPE,DATA_PIN,CLK_PIN,COLOR_ORDER>(leds, NUM_LEDS).setCorrection(TypicalPixelString);
 
   // set master brightness control
   FastLED.setBrightness(BRIGHTNESS);
-  //fill_solid(leds, NUM_LEDS, CHSV(100,255,100));
-  //FastLED.show();
-  //delay(1000);
   previous_time=millis();
 }
 
@@ -60,7 +70,7 @@ void setup() {
 typedef void (*SimplePatternList[])();
 //SimplePatternList gPatterns = { rainbow, rainbowWithGlitter, confetti, sinelon, juggle, bpm };
 
-SimplePatternList gPatterns = {snake_game_loop, smooth_confetti, ring_burst};
+SimplePatternList gPatterns = {smooth_confetti, ring_burst};
 //SimplePatternList gPatterns = {smooth_confetti};
 
 uint8_t gCurrentPatternNumber = 0; // Index number of which pattern is current
@@ -101,12 +111,23 @@ uint16_t XY( uint8_t x, uint8_t y)
   return i;
 }
   
-void loop()
-{
+void loop(){ 
+  //print_debug();
+  if (game_running == false){
+    if (analogRead(JOYSTICK_X) >900){
+      initialize_snake();
+      game_running = true;
+    }
+  }
   actual_time=millis();
   if (actual_time - previous_time > interval){
     // Call the current pattern function once, updating the 'leds' array
-    gPatterns[gCurrentPatternNumber]();
+    if (game_running == true){
+      snake_game_loop();
+    }
+    else{
+      gPatterns[gCurrentPatternNumber]();
+    }
     // send the 'leds' array out to the actual LED strip
     FastLED.show();
     previous_time=actual_time;
@@ -118,15 +139,17 @@ void loop()
   EVERY_N_SECONDS( 5 ) {increase_snake_speed();}
 }
 
-/*void print_debug(){
+void print_debug(){
   Serial.print("Debug X ");
   Serial.print(analogRead(JOYSTICK_X));
+  delay(400);
   Serial.print("Debug Y ");
   Serial.print(analogRead(JOYSTICK_Y));
+  delay(400);
   Serial.println();
   Serial.println();
 }
-*/
+
 void smooth_confetti()
 {
   for (int i=0;i<NUM_LEDS;i++){
@@ -205,17 +228,6 @@ void snake_game_loop() {
   }
 }
 
-
-
-struct Point {
-  int row = 0, col = 0;
-  Point(int row = 0, int col = 0): row(row), col(col) {}
-};
-
-struct Coordinate {
-  int x = 0, y = 0;
-  Coordinate(int x = 0, int y = 0): x(x), y(y) {}
-};
 
 bool win = false;
 bool gameOver = false;
@@ -392,7 +404,10 @@ void handleGameStates() {
     //showScoreMessage(snakeLength - initialSnakeLength);
 
     //if (gameOver) showGameOverMessage();
-    //else if (win) showWinMessage();
+    if (win)
+    {
+      display_win();
+    }
 
     // re-init the game
     win = false;
@@ -407,12 +422,18 @@ void handleGameStates() {
     for (int i=0; i<100; i++){
       leds[i].setRGB(0,0,0);
       }
+    game_running = false;
     }
-    //matrix.clearDisplay(0);
 }
 
 
-void unrollSnake() {
+void display_win(){
+   fill_solid( &(leds[1]), 1, CRGB( 255, 255, 255) );
+   FastLED.show();
+   delay(5000);
+}
+
+//void unrollSnake() {
   /*
   // switch off the food LED
   //matrix.setLed(0, food.row, food.col, 0);
@@ -455,7 +476,7 @@ void unrollSnake() {
     }
   }
   */
-}
+//}
 
 
 // calibrate the joystick home for 10 times
@@ -472,7 +493,7 @@ void calibrateJoystick() {
 }
 
 void initialize_snake() {
-
+  snake_speed = 1;
   randomSeed(analogRead(10));
   snake.row = random(10);
   snake.col = random(10);
