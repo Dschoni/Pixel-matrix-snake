@@ -2,15 +2,6 @@
 
 FASTLED_USING_NAMESPACE
 
-// FastLED "100-lines-of-code" demo reel, showing just a few 
-// of the kinds of animation patterns you can quickly and easily 
-// compose using FastLED.  
-//
-// This example also shows one easy way to define multiple 
-// animations patterns and have them automatically rotate.
-//
-// -Mark Kriegsman, December 2014
-
 #if defined(FASTLED_VERSION) && (FASTLED_VERSION < 3001000)
 #warning "Requires FastLED 3.1 or later; check github for latest code."
 #endif
@@ -22,7 +13,7 @@ FASTLED_USING_NAMESPACE
 #define NUM_LEDS    100
 //#define FASTLED_INTERRUPT_RETRY_COUNT 0
 #define BRIGHTNESS         100
-#define FRAMES_PER_SECOND  2
+#define FRAMES_PER_SECOND  30
 #define JOYSTICK_X 2
 #define JOYSTICK_Y 3
 
@@ -32,11 +23,14 @@ uint8_t globvals[4*NUM_LEDS];//speed, reset, hue
 unsigned long actual_time;
 unsigned long previous_time;
 unsigned long interval=1000/FRAMES_PER_SECOND;
+uint8_t snake_speed = 1;
+const short initialSnakeLength = 3;
+uint8_t game_cycle = 0;
 
 
 
 void setup() {
-  Serial.begin(9600);
+  //Serial.begin(9600);
   for (int i=0;i<NUM_LEDS;i++){
     for (int j=0;j<4;j++){
       globvals[i*4+j]=0;
@@ -121,10 +115,10 @@ void loop()
   EVERY_N_MILLISECONDS( 150 ) { gHue++; } // slowly cycle the "base color" through the rainbow
   EVERY_N_MILLISECONDS( 20 ) { gHue2++; } // slowly cycle the "base color" through the rainbow
   EVERY_N_SECONDS( 120 ) { nextPattern(); } // change patterns periodically
-  EVERY_N_SECONDS( 1 ) {print_debug();}
+  EVERY_N_SECONDS( 5 ) {increase_snake_speed();}
 }
 
-void print_debug(){
+/*void print_debug(){
   Serial.print("Debug X ");
   Serial.print(analogRead(JOYSTICK_X));
   Serial.print("Debug Y ");
@@ -132,7 +126,7 @@ void print_debug(){
   Serial.println();
   Serial.println();
 }
-
+*/
 void smooth_confetti()
 {
   for (int i=0;i<NUM_LEDS;i++){
@@ -200,20 +194,15 @@ void ring_burst()
   }
 }
 
-
-
-
-
-// initial snake length (1...63, recommended 3)
-const short initialSnakeLength = 3;
-
-
-
 void snake_game_loop() {
   generateFood();    // if there is no food, generate one
   scanJoystick();    // watches joystick movements & blinks with food
-  calculateSnake();  // calculates snake parameters
-  handleGameStates();
+  game_cycle++;
+  if (game_cycle > (FRAMES_PER_SECOND-snake_speed)){
+    calculateSnake();  // calculates snake parameters
+    handleGameStates();
+    game_cycle = 0;
+  }
 }
 
 
@@ -242,7 +231,6 @@ Coordinate joystickHome(500, 500);
 
 // snake parameters
 int snakeLength = initialSnakeLength; // choosed by the user in the config section
-int snakeSpeed = 1; // will be set according to potentiometer value, cannot be 0
 int snakeDirection = 0; // if it is 0, the snake does not move
 
 // direction constants
@@ -287,17 +275,9 @@ void generateFood() {
 }
 
 
-// watches joystick movements & blinks with food
+// watches joystick movements
 void scanJoystick() {
   int previousDirection = snakeDirection; // save the last direction
-  long timestamp = millis();
-
-  while (millis() < timestamp + snakeSpeed) {
-    // calculate snake speed exponentially (10...1000ms)
-//    float raw = mapf(analogRead(Pin::potentiometer), 0, 1023, 0, 1);
-//    snakeSpeed = mapf(pow(raw, 3.5), 0, 1, 10, 1000); // change the speed exponentially
-//    if (snakeSpeed == 0) snakeSpeed = 1; // safety: speed can not be 0
-    snakeSpeed=1;
 
     // determine the direction of the snake
     analogRead(JOYSTICK_Y) < joystickHome.y - joystickThreshold ? snakeDirection = up    : 0;
@@ -311,7 +291,6 @@ void scanJoystick() {
 
     // display food
     leds[XY (food.row,food.col)].setRGB( 255, 0, 0);
-  }
 }
 
 
@@ -499,12 +478,9 @@ void initialize_snake() {
   snake.col = random(10);
 }
 
+void increase_snake_speed(){
 
-
-
-
-
-// standard map function, but with floats
-float mapf(float x, float in_min, float in_max, float out_min, float out_max) {
-  return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
+  if (snake_speed<FRAMES_PER_SECOND){
+    snake_speed++;
+  }
 }
