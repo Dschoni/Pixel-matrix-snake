@@ -81,8 +81,8 @@ void nextPattern()
   gCurrentPatternNumber = (gCurrentPatternNumber + 1) % ARRAY_SIZE( gPatterns);
 }
 
-const uint8_t kMatrixWidth = 16;
-const uint8_t kMatrixHeight = 16;
+const uint8_t kMatrixWidth = 10;
+const uint8_t kMatrixHeight = 10;
 const bool    kMatrixSerpentineLayout = true;
 
 uint16_t XY( uint8_t x, uint8_t y)
