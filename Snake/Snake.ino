@@ -6,16 +6,16 @@ FASTLED_USING_NAMESPACE
 #warning "Requires FastLED 3.1 or later; check github for latest code."
 #endif
 
-#define DATA_PIN    5
-#define CLK_PIN   7
+#define DATA_PIN    11
+#define CLK_PIN   13
 #define LED_TYPE    WS2801
 #define COLOR_ORDER RGB
 #define NUM_LEDS    100
 //#define FASTLED_INTERRUPT_RETRY_COUNT 0
 #define BRIGHTNESS         255
 #define FRAMES_PER_SECOND  30
-#define JOYSTICK_X 3
-#define JOYSTICK_Y 2
+#define JOYSTICK_X 2
+#define JOYSTICK_Y 3
 
 
 CRGB leds[NUM_LEDS];
@@ -38,7 +38,7 @@ struct Coordinate {
   Coordinate(int x = 0, int y = 0): x(x), y(y) {}
 };
 
-
+Coordinate joystickHome(500, 500);
 
 void setup() {
   //Serial.begin(9600);
@@ -114,7 +114,7 @@ uint16_t XY( uint8_t x, uint8_t y)
 void loop(){ 
   //print_debug();
   if (game_running == false){
-    if (analogRead(JOYSTICK_X) >900){
+    if (analogRead(JOYSTICK_X) >700){
       initialize_snake();
       game_running = true;
     }
@@ -239,7 +239,7 @@ Point snake;
 Point food(-1, -1);
 
 // construct with default values in case the user turns off the calibration
-Coordinate joystickHome(500, 500);
+// joystickHome(500, 500);
 
 // snake parameters
 int snakeLength = initialSnakeLength; // choosed by the user in the config section
@@ -252,7 +252,7 @@ const short down   = 3; // 'down - 2' must be 'up'
 const short left   = 4; // 'left - 2' must be 'right'
 
 // threshold where movement of the joystick will be accepted
-const int joystickThreshold = 200;
+const int joystickThreshold = 100;
 
 // artificial logarithmity (steepness) of the potentiometer (-1 = linear, 1 = natural, bigger = steeper (recommended 0...1))
 const float logarithmity = 0.4;
